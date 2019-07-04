@@ -12,58 +12,103 @@ const md5 = require('js-md5');
 //       continuation: 'eyJwYWdlIjogMn0',
 //       has_more_items: true },
 
-const postAttendeeToMC = async (attendee, checked_in) => {
-    if(!attendee){
-        console.log(attendee, checked_in)
-        return
-    }
-    await mailchimp.post({
-        path: 'lists/1b9f43edc3/members',
-        body: {
-            "email_address": attendee.profile.email,
-            "status": "subscribed",
-            "merge_fields": {
-                "FNAME": attendee.profile.first_name,
-                "LNAME": attendee.profile.last_name
-            }
-        }
-    }).then((res) => {
-       console.log(res)
+const chainAsync = fns => {
+    let curr = 0;
+    const last = fns[fns.length - 1];
+    const next = () => {
+      const fn = fns[curr++];
+      fn === last ? fn() : fn(next);
+    };
+    next();
+  };
 
-    }).catch(async (err) => {
-        console.log(err.title)
-        if (err.title === 'Member Exists') {
-            if (checked_in === true) {
-            //    console.log('happening')
-            await mailchimp.post({
-                    path: `lists/1b9f43edc3/members/${md5(attendee.profile.email)}/tags`,
-                    body: {
-                        "tags": [{
-                            "name": "Checked-In-Test",
-                            "status": "active"
-                        }]
-                    }
-                }).then((res) => {
-                     console.log(res)
+function postAttendeeToMC(attendees, checked_in) {
+
+
+    // path: 'lists/1b9f43edc3/members',
+    // body: {
+    //     "email_address": attendee.profile.email,
+    //     "status": "subscribed",
+    //     "merge_fields": {
+    //         "FNAME": attendee.profile.first_name,
+    //         "LNAME": attendee.profile.last_name
+    //     }
+    // }
+
+    //  console.log(res)
+
+    // }).catch((err) => {
+    // console.log(err.title)
+    // if (err.title === 'Member Exists') {
+    //     if (checked_in === true) {
+    //     //    console.log('happening')
+    //         mailchimp.post({
+    //             path: `lists/1b9f43edc3/members/${md5(attendee.profile.email)}/tags`,
+    //             body: {
+    //                 "tags": [{
+    //                     "name": "Checked-In-Test",
+    //                     "status": "active"
+    //                 }]
+    //             }
+    //         }).then((res) => {
+    //              console.log(res)
+    //         }).catch((err) => {
+    //             console.log(err)
+    //         })
+    //     }
+    // }
+}
+let attendee_batch = []
+axios.get(`https://www.eventbriteapi.com/v3/events/${process.env.EB_EVENT_ID}/attendees/?token=${process.env.EB_PRIVATE_API_KEY}`).then((res) => {
+    console.log(res.data.pagination.page_count)
+        chainAsync([
+        next => {
+            for (i = 1; i <= res.data.pagination.page_count; i++) {
+            
+                axios.get(`https://www.eventbriteapi.com/v3/events/${process.env.EB_EVENT_ID}/attendees/?token=${process.env.EB_PRIVATE_API_KEY}&page=${i}`).then((res) => {
+                    event_attendees = res.data.attendees    
+                    event_attendees.forEach(attendee => {
+                        attendee_obj = {
+                            "method": "post",
+                            "path": "/lists/864ae29f4d/members/",
+                            "body": {
+                                "email_address": attendee.profile.email,
+                                "status": "subscribed",
+                                "merge_fields": {
+                                    "FNAME": attendee.profile.first_name,
+                                    "LNAME": attendee.profile.last_name
+                                }
+                            }
+                        }
+                        attendee_batch.push(attendee_obj)
+                    })
                 }).catch((err) => {
-                    console.log(err)
+                    //console.log(err)
                 })
             }
-        }
-    })
-}
+            setTimeout(next, 5000);
+            console.log(attendee_batch)
+        },
+        next => {
+            console.log('5 second');
+            mailchimp.batch(attendee_batch, {
+                        wait : true,
+                        interval : 100,
+                        unpack : true,
+                   }).then((res)=>{
+                       console.log(res)
+            
+                   }).catch((err)=>{
+                       console.log(err.title)
+                   })
+            console.log(attendee_batch.length)
+                   
 
-axios.get(`https://www.eventbriteapi.com/v3/events/${process.env.EB_EVENT_ID}/attendees/?token=${process.env.EB_PRIVATE_API_KEY}`).then((res) => {
-    for(i = 1; i <= parseInt(res.data.pagination.page_count); i++){
-         axios.get(`https://www.eventbriteapi.com/v3/events/${process.env.EB_EVENT_ID}/attendees/?token=${process.env.EB_PRIVATE_API_KEY}&page=${i}`).then((res) => {
-            event_attendees = res.data.attendees
-            event_attendees.forEach(attendee => {   
-               postAttendeeToMC(attendee, attendee.checked_in)
-            });
-        }).catch((err) => {
-            console.log(err)
-        })
-    }
+        }
+
+        ]);
+    
 }).catch((err) => {
-  console.log(err)
+    console.log(err)
 });
+
