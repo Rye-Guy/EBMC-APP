@@ -15,7 +15,6 @@ const chainAsync = fns => {
 };
 
 let timeToRef = ''
-let counter = 0
 
 function theStuff() {
     let attendee_batch = []
@@ -32,6 +31,7 @@ function theStuff() {
                                     dateChanged = attendee.changed
                                     dateChanged = new Date(dateChanged)
                                     console.log(timeToRef < dateChanged)
+                                    console.log(timeToRef, dateChanged)
                                     if (timeToRef === '' || timeToRef < dateChanged) {
                                         attendee_obj = {
                                             "method": "post",
@@ -67,12 +67,11 @@ function theStuff() {
                                 console.log(err)
                             })
                         }
-                        if (counter > 0){
-                            timeToRef = new Date
-                        }
+                        
                         setTimeout(next, 5000);
                     }, next => {
-          
+                        timeToRef = new Date();
+                        
                         console.log('5 second');
                         mailchimp.batch(attendee_batch, {
                             wait: true,
@@ -96,8 +95,6 @@ function theStuff() {
                         }).catch((err)=>{
                             console.log(err)
                         })
-                        counter++
-                        console.log(counter)
                     }
             ])
         }
