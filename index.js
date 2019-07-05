@@ -1,8 +1,8 @@
 require('dotenv').config()
-import Mailchimp from 'mailchimp-api-v3';
-import { get } from 'axios';
+const Mailchimp = require('mailchimp-api-v3')
+const axios = require('axios')
 const mailchimp = new Mailchimp(process.env.MC_API_KEY)
-import md5 from 'js-md5';
+const md5 = require('js-md5');
 
 const chainAsync = fns => {
     let curr = 0;
@@ -21,12 +21,12 @@ function theStuff() {
     let attendee_batch = []
     let attendees_checked_in = []
 
-    get(`https://www.eventbriteapi.com/v3/events/${process.env.EB_EVENT_ID}/attendees/?token=${process.env.EB_PRIVATE_API_KEY}`).then((res) => {
+    axios.get(`https://www.eventbriteapi.com/v3/events/${process.env.EB_EVENT_ID}/attendees/?token=${process.env.EB_PRIVATE_API_KEY}`).then((res) => {
         
         chainAsync([
                     next => {
                         for (i = 1; i <= res.data.pagination.page_count; i++) {
-                            get(`https://www.eventbriteapi.com/v3/events/${process.env.EB_EVENT_ID}/attendees/?token=${process.env.EB_PRIVATE_API_KEY}&page=${i}`).then((res) => {
+                            axios.get(`https://www.eventbriteapi.com/v3/events/${process.env.EB_EVENT_ID}/attendees/?token=${process.env.EB_PRIVATE_API_KEY}&page=${i}`).then((res) => {
                                 event_attendees = res.data.attendees
                                 event_attendees.forEach(attendee => {
                                     dateChanged = attendee.changed
