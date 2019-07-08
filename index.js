@@ -53,7 +53,7 @@ function theStuff() {
                                                 "path": `/lists/${process.env.MC_AUDIENCE_ID}/members/${md5(attendee.profile.email)}/tags`,
                                                 "body": {
                                                     "tags": [{
-                                                        "name": "checked-in",
+                                                        "name": process.env.MC_TAG_NAME,
                                                         "status": "active"
                                                     }]
                                                 }
