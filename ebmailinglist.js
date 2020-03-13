@@ -99,6 +99,6 @@ function theStuff() {
             ])
         }
     )
-    setTimeout(theStuff, 60000)
+    setTimeout(theStuff, 120000)
 }
     theStuff();
